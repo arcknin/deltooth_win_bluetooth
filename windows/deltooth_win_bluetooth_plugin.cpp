@@ -33,8 +33,36 @@ using namespace Windows::Devices::Bluetooth::Rfcomm;
 
 #include <memory>
 #include <sstream>
+#include <iomanip>
 
 namespace deltooth_win_bluetooth {
+
+// Stream handler concreto para o EventChannel de scan
+class ScanStreamHandler final
+    : public flutter::StreamHandler<flutter::EncodableValue> {
+ public:
+  explicit ScanStreamHandler(DeltoothWinBluetoothPlugin* plugin)
+      : plugin_(plugin) {}
+
+ protected:
+  std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
+  OnListenInternal(
+      const flutter::EncodableValue* /*arguments*/,
+      std::unique_ptr<flutter::EventSink<flutter::EncodableValue>>&& events)
+      override {
+    plugin_->StartListening(std::move(events));
+    return nullptr;
+  }
+
+  std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
+  OnCancelInternal(const flutter::EncodableValue* /*arguments*/) override {
+    plugin_->StopListening();
+    return nullptr;
+  }
+
+ private:
+  DeltoothWinBluetoothPlugin* plugin_;
+};
 
 // static
 void DeltoothWinBluetoothPlugin::RegisterWithRegistrar(
@@ -45,6 +73,7 @@ void DeltoothWinBluetoothPlugin::RegisterWithRegistrar(
           &flutter::StandardMethodCodec::GetInstance());
 
   auto plugin = std::make_unique<DeltoothWinBluetoothPlugin>();
+  auto plugin_raw = plugin.get();
 
   channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
@@ -56,18 +85,7 @@ void DeltoothWinBluetoothPlugin::RegisterWithRegistrar(
           registrar->messenger(), "deltooth_win_bluetooth/scan",
           &flutter::StandardMethodCodec::GetInstance());
 
-  auto handler = std::make_unique<flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
-      [plugin_pointer](const flutter::EncodableValue *arguments,
-                       std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> &&events)
-          -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>> {
-        plugin_pointer->StartListening(std::move(events));
-        return nullptr;
-      },
-      [plugin_pointer](const flutter::EncodableValue *arguments)
-          -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>> {
-        plugin_pointer->StopListening();
-        return nullptr;
-      });
+  auto handler = std::make_unique<ScanStreamHandler>(plugin_raw);
   event_channel->SetStreamHandler(std::move(handler));
 
   registrar->AddPlugin(std::move(plugin));
