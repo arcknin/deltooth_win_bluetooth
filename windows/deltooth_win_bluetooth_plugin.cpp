@@ -138,10 +138,12 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
   } else if (method_call.method_name().compare("stopScanStream") == 0) {
     StopWatcher();
     result->Success();
+
     return;
   } else if (method_call.method_name() == "connect") {
     const auto *args =
         std::get_if<flutter::EncodableMap>(method_call.arguments());
+
     if (!args || !args->count(flutter::EncodableValue("address"))) {
       result->Error("bad-args", "missing 'address'");
       return;
@@ -177,9 +179,11 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
                     winrt::to_string(e.message()));
     }
     return;
+
   } else if (method_call.method_name() == "disconnect") {
     const auto *args =
         std::get_if<flutter::EncodableMap>(method_call.arguments());
+
     if (!args || !args->count(flutter::EncodableValue("address"))) {
       result->Error("bad-args", "missing 'address'");
       return;
@@ -193,7 +197,9 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     }
     result->Success(flutter::EncodableValue(true));
     return;
+
   } else if (method_call.method_name() == "getConnected") {
+
     flutter::EncodableList list;
     for (auto &kv : connected_) {
       flutter::EncodableMap m;
@@ -209,11 +215,13 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     }
     result->Success(list);
     return;
+
   } else if (method_call.method_name() == "getServices") {
     const auto *args =
         std::get_if<flutter::EncodableMap>(method_call.arguments());
     uint64_t addr = (uint64_t)std::get<int64_t>(
         args->at(flutter::EncodableValue("address")));
+
     auto dev = connected_.at(addr);
     auto res = dev.GetGattServicesAsync().get();
     auto list = res.Services();
@@ -226,6 +234,7 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     }
     result->Success(out);
     return;
+
   } else if (method_call.method_name() == "getCharacteristics") {
     const auto *args =
         std::get_if<flutter::EncodableMap>(method_call.arguments());
@@ -233,6 +242,7 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
         args->at(flutter::EncodableValue("address")));
     auto uuidStr =
         std::get<std::string>(args->at(flutter::EncodableValue("service")));
+
     auto dev = connected_.at(addr);
     auto services = dev.GetGattServicesAsync().get().Services();
     flutter::EncodableList out;
