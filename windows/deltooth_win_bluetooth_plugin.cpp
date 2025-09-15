@@ -139,9 +139,9 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
   } else {
     result->NotImplemented();
   }
-  if (call.method_name() == "connect") {
+  if (method_call.method_name() == "connect") {
     // args: {"address": 123456789012345ULL}  (ou string “AA:BB:..” que você converte p/ uint64)
-    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+    const auto* args = std::get_if<flutter::EncodableMap>(method_call.arguments());
     if (!args || !args->count(flutter::EncodableValue("address"))) {
       result->Error("bad-args", "missing 'address'");
       return;
@@ -175,8 +175,8 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     return;
   }
 
-  if (call.method_name() == "disconnect") {
-    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+  if (method_call.method_name() == "disconnect") {
+    const auto* args = std::get_if<flutter::EncodableMap>(method_call.arguments());
     if (!args || !args->count(flutter::EncodableValue("address"))) {
       result->Error("bad-args", "missing 'address'"); return;
     }
@@ -190,7 +190,7 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     return;
   }
 
-  if (call.method_name() == "getConnected") {
+  if (method_call.method_name() == "getConnected") {
     flutter::EncodableList list;
     for (auto& kv : connected_) {
       flutter::EncodableMap m;
@@ -204,8 +204,8 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     return;
   }
 
-  if (call.method_name() == "getServices") {
-    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+  if (method_call.method_name() == "getServices") {
+    const auto* args = std::get_if<flutter::EncodableMap>(method_call.arguments());
     uint64_t addr = (uint64_t)std::get<int64_t>(args->at(flutter::EncodableValue("address")));
     auto dev = connected_.at(addr);
     auto res = dev.GetGattServicesAsync().get();   // GattDeviceServicesResult
@@ -220,8 +220,8 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     return;
   }
   
-  if (call.method_name() == "getCharacteristics") {
-    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+  if (method_call.method_name() == "getCharacteristics") {
+    const auto* args = std::get_if<flutter::EncodableMap>(method_call.arguments());
     uint64_t addr = (uint64_t)std::get<int64_t>(args->at(flutter::EncodableValue("address")));
     auto uuidStr   = std::get<std::string>(args->at(flutter::EncodableValue("service")));
     auto dev = connected_.at(addr);
