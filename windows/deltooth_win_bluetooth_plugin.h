@@ -11,6 +11,10 @@
 
 #include <memory>
 
+#include <map>
+#include <winrt/Windows.Devices.Bluetooth.h>
+std::map<uint64_t, winrt::Windows::Devices::Bluetooth::BluetoothLEDevice> connected_;
+
 namespace deltooth_win_bluetooth {
 
 class DeltoothWinBluetoothPlugin : public flutter::Plugin {
@@ -30,6 +34,10 @@ class DeltoothWinBluetoothPlugin : public flutter::Plugin {
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
 
+  // Expostos para o handler de stream
+  void StartListening(std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> &&sink);
+  void StopListening();
+
  private:
   // Stream sink para eventos de scan
   std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> scan_sink_;
@@ -40,8 +48,6 @@ class DeltoothWinBluetoothPlugin : public flutter::Plugin {
 
   void StartWatcher();
   void StopWatcher();
-  void StartListening(std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> &&sink);
-  void StopListening();
   void OnAdvertisement(winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher const& sender,
                        winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs const& args);
 };

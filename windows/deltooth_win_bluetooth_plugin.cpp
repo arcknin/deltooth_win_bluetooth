@@ -139,6 +139,107 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
   } else {
     result->NotImplemented();
   }
+  if (call.method_name() == "connect") {
+    // args: {"address": 123456789012345ULL}  (ou string “AA:BB:..” que você converte p/ uint64)
+    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args || !args->count(flutter::EncodableValue("address"))) {
+      result->Error("bad-args", "missing 'address'");
+      return;
+    }
+    uint64_t addr = 0;
+    const auto& v = args->at(flutter::EncodableValue("address"));
+    if (const auto p = std::get_if<int64_t>(&std::get<flutter::EncodableValue>(v))) addr = static_cast<uint64_t>(*p);
+    // se vier string "AA:BB:..", faça um parse pra uint64_t aqui
+  
+    try {
+      using namespace winrt::Windows::Devices::Bluetooth;
+      auto async = BluetoothLEDevice::FromBluetoothAddressAsync(addr);
+      auto dev   = async.get();
+      if (!dev) { result->Error("not-found", "device null"); return; }
+  
+      // guardar para gerenciar conexão/estado
+      connected_[addr] = dev;
+      dev.ConnectionStatusChanged([this, addr](auto const& d, auto const&) {
+        auto st = d.ConnectionStatus();
+        // opcional: emitir evento em um EventChannel de “conn”
+      });
+  
+      flutter::EncodableMap out;
+      out[flutter::EncodableValue("name")] = flutter::EncodableValue(winrt::to_string(dev.Name()));
+      out[flutter::EncodableValue("connected")] =
+          flutter::EncodableValue(dev.ConnectionStatus() == BluetoothConnectionStatus::Connected);
+      result->Success(out);
+    } catch (const winrt::hresult_error& e) {
+      result->Error(std::to_string(e.code().value), winrt::to_string(e.message()));
+    }
+    return;
+  }
+
+  if (call.method_name() == "disconnect") {
+    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+    if (!args || !args->count(flutter::EncodableValue("address"))) {
+      result->Error("bad-args", "missing 'address'"); return;
+    }
+    uint64_t addr = (uint64_t)std::get<int64_t>(args->at(flutter::EncodableValue("address")));
+    auto it = connected_.find(addr);
+    if (it != connected_.end()) {
+      it->second.Close();            // encerra handle WinRT
+      connected_.erase(it);
+    }
+    result->Success(flutter::EncodableValue(true));
+    return;
+  }
+
+  if (call.method_name() == "getConnected") {
+    flutter::EncodableList list;
+    for (auto& kv : connected_) {
+      flutter::EncodableMap m;
+      m[flutter::EncodableValue("address")] = flutter::EncodableValue((int64_t)kv.first);
+      m[flutter::EncodableValue("name")]    = flutter::EncodableValue(winrt::to_string(kv.second.Name()));
+      m[flutter::EncodableValue("status")]  = flutter::EncodableValue(
+          kv.second.ConnectionStatus() == winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus::Connected);
+      list.emplace_back(m);
+    }
+    result->Success(list);
+    return;
+  }
+
+  if (call.method_name() == "getServices") {
+    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+    uint64_t addr = (uint64_t)std::get<int64_t>(args->at(flutter::EncodableValue("address")));
+    auto dev = connected_.at(addr);
+    auto res = dev.GetGattServicesAsync().get();   // GattDeviceServicesResult
+    auto list = res.Services();                    // IVectorView<GattDeviceService>
+    flutter::EncodableList out;
+    for (auto const& s : list) {
+      auto uuid = winrt::to_string(winrt::to_hstring(s.Uuid()));
+      flutter::EncodableMap m; m[flutter::EncodableValue("uuid")] = flutter::EncodableValue(uuid);
+      out.emplace_back(m);
+    }
+    result->Success(out);
+    return;
+  }
+  
+  if (call.method_name() == "getCharacteristics") {
+    const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+    uint64_t addr = (uint64_t)std::get<int64_t>(args->at(flutter::EncodableValue("address")));
+    auto uuidStr   = std::get<std::string>(args->at(flutter::EncodableValue("service")));
+    auto dev = connected_.at(addr);
+    auto services = dev.GetGattServicesAsync().get().Services();
+    flutter::EncodableList out;
+    for (auto const& s : services) {
+      if (winrt::to_string(winrt::to_hstring(s.Uuid())) == uuidStr) {
+        auto chars = s.GetCharacteristicsAsync().get().Characteristics();
+        for (auto const& c : chars) {
+          auto cuuid = winrt::to_string(winrt::to_hstring(c.Uuid()));
+          flutter::EncodableMap m; m[flutter::EncodableValue("uuid")] = flutter::EncodableValue(cuuid);
+          out.emplace_back(m);
+        }
+      }
+    }
+    result->Success(out);
+    return;
+  }
 }
 
 void DeltoothWinBluetoothPlugin::StartListening(
