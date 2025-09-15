@@ -222,7 +222,12 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     uint64_t addr = (uint64_t)std::get<int64_t>(
         args->at(flutter::EncodableValue("address")));
 
-    auto dev = connected_.at(addr);
+        auto it = connected_.find(addr);
+        if (it == connected_.end()) {
+          result->Error("not-found", "device not connected");
+          return;
+        }
+        auto &dev = it->second;
     auto res = dev.GetGattServicesAsync().get();
     auto list = res.Services();
     flutter::EncodableList out;
@@ -243,7 +248,12 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
     auto uuidStr =
         std::get<std::string>(args->at(flutter::EncodableValue("service")));
 
-    auto dev = connected_.at(addr);
+        auto it = connected_.find(addr);
+        if (it == connected_.end()) {
+          result->Error("not-found", "device not connected");
+          return;
+        }
+        auto &dev = it->second;
     auto services = dev.GetGattServicesAsync().get().Services();
     flutter::EncodableList out;
     for (auto const &s : services) {
