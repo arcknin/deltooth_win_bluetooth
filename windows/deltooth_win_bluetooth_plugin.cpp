@@ -163,7 +163,7 @@ void DeltoothWinBluetoothPlugin::HandleMethodCall(
         return;
       }
 
-      connected_[addr] = dev;
+      connected_.insert_or_assign(addr, dev);
       dev.ConnectionStatusChanged([this, addr](auto const &d, auto const &) {
         auto st = d.ConnectionStatus();
       });
