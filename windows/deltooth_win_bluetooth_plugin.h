@@ -13,7 +13,6 @@
 
 #include <map>
 #include <winrt/Windows.Devices.Bluetooth.h>
-std::map<uint64_t, winrt::Windows::Devices::Bluetooth::BluetoothLEDevice> connected_;
 
 namespace deltooth_win_bluetooth {
 
@@ -45,6 +44,9 @@ class DeltoothWinBluetoothPlugin : public flutter::Plugin {
   // Watcher BLE
   winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher watcher_{ nullptr };
   winrt::event_token watcher_token_{};
+
+  std::map<uint64_t, winrt::Windows::Devices::Bluetooth::BluetoothLEDevice>
+      connected_;
 
   void StartWatcher();
   void StopWatcher();
